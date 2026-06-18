@@ -502,6 +502,7 @@ class Event extends Model
                     $copy->start_date = $date->format('Y-m-d');
                     $copy->is_template = false;
                     $copy->recurrence_interval = null;
+                    $copy->recurrence_interval_count = null;
                     $copy->sort_date = $copy->sort_date();
                     $copy->reset_live_event_stats();
 
