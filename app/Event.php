@@ -521,12 +521,16 @@ class Event extends Model
 
     public function delete_upcoming_recurrences() {
         $date = new DateTime();
-        // Force-delete here so editing a template clears the slate and the
-        // instances regenerate cleanly. A user deleting a single occurrence
-        // goes through the normal soft-delete path, which the existence check
-        // in create_upcoming_recurrences() honors via withTrashed().
+        // Force-delete the *active* future instances only so editing a
+        // template clears the slate and regenerates cleanly. The explicit
+        // whereNull('deleted_at') is required because forceDelete() bypasses
+        // the SoftDeletes global scope; without it we would also hard-delete
+        // the tombstones of occurrences a user deleted, and the withTrashed()
+        // existence check in create_upcoming_recurrences() would then
+        // resurrect those deleted dates on the next regeneration.
         Event::where('created_from_template_event_id', $this->id)
             ->where('start_date', '>', $date->format('Y-m-d'))
+            ->whereNull('deleted_at')
             ->forceDelete();
     }
 

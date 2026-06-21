@@ -71,4 +71,31 @@ class RecurringEventResurrectionTest extends TestCase
         $after = Event::where('created_from_template_event_id', $template->id)->count();
         $this->assertEquals($before, $after, 'Template edit should regenerate the same instances');
     }
+
+    public function testEditingTemplateDoesNotResurrectDeletedOccurrence() {
+        [$template, $firstDate] = $this->makeWeeklyTemplate();
+
+        $template->create_upcoming_recurrences();
+
+        // A user deletes a single occurrence (soft delete).
+        $victim = Event::where('created_from_template_event_id', $template->id)
+            ->where('start_date', $firstDate)->firstOrFail();
+        $victim->delete();
+
+        // The template is later edited, which clears and regenerates the
+        // future slate (delete_upcoming_recurrences + create_upcoming_recurrences).
+        $template->delete_upcoming_recurrences();
+        $template->create_upcoming_recurrences();
+
+        // The occurrence the user deleted must stay gone...
+        $active = Event::where('created_from_template_event_id', $template->id)
+            ->where('start_date', $firstDate)->count();
+        $this->assertEquals(0, $active, 'Template edit resurrected a user-deleted occurrence');
+
+        // ...preserved as exactly one soft-deleted tombstone, not wiped or duplicated.
+        $tombstones = Event::withTrashed()
+            ->where('created_from_template_event_id', $template->id)
+            ->where('start_date', $firstDate)->count();
+        $this->assertEquals(1, $tombstones, 'Expected the deletion to survive as one tombstone');
+    }
 }
