@@ -484,7 +484,10 @@ class Event extends Model
 
         foreach($period as $date) {
             if($date >= $now) {
-                $exists = Event::where('created_from_template_event_id', $this->id)
+                // Include soft-deleted instances so an occurrence a user
+                // deleted is not resurrected on the next scheduler run.
+                $exists = Event::withTrashed()
+                  ->where('created_from_template_event_id', $this->id)
                   ->where('start_date', $date->format('Y-m-d'))
                   ->count();
                 if($exists == 0) {
@@ -518,9 +521,13 @@ class Event extends Model
 
     public function delete_upcoming_recurrences() {
         $date = new DateTime();
+        // Force-delete here so editing a template clears the slate and the
+        // instances regenerate cleanly. A user deleting a single occurrence
+        // goes through the normal soft-delete path, which the existence check
+        // in create_upcoming_recurrences() honors via withTrashed().
         Event::where('created_from_template_event_id', $this->id)
             ->where('start_date', '>', $date->format('Y-m-d'))
-            ->delete();
+            ->forceDelete();
     }
 
     private function replace_date($template_event, $property) {
