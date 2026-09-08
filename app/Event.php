@@ -425,7 +425,8 @@ class Event extends Model
             case 'biweekly_dow':
                 return 'Every other week on '.$start->format('l').'s';
             case 'weekly_n':
-                return 'Every '.((int)$this->recurrence_interval_count ?: 1).' weeks on '.$start->format('l').'s';
+                $weeks = (int)$this->recurrence_interval_count ?: 1;
+                return ($weeks == 1 ? 'Every week' : 'Every '.$weeks.' weeks').' on '.$start->format('l').'s';
             case 'monthly_date':
                 return 'Every month on the '.$start->format('dS');
             case 'yearly':
